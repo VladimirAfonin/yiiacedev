@@ -19,6 +19,14 @@ use frontend\models\ContactForm;
  */
 class SiteController extends Controller
 {
+    private $_signupService;
+
+    public function __construct(string $id,  $module, SignupService $service, array $config = [])
+    {
+        parent::__construct($id, $module, $config);
+        $this->_signupService = $service;
+    }
+
     /**
      * {@inheritdoc}
      */
@@ -148,29 +156,38 @@ class SiteController extends Controller
      * Signs user up.
      *
      * @return mixed
+     * @throws \yii\base\Exception
      */
     public function actionSignup()
     {
-       /* $model = new SignupForm();
-        if ($model->load(Yii::$app->request->post())) {
-            if ($user = $model->signup()) {
-                if (Yii::$app->getUser()->login($user)) {
-                    return $this->goHome();
-                }
-            }
-        }*/
-
         $form = new SignupForm();
         if($form->load(Yii::$app->request->post()) && $form->validate()) {
-            $user = SignUpService::signup($form);
-            if(Yii::$app->getUser()->login($user)) {
+            try {
+                $this->_signupService->signup($form);
+                Yii::$app->session->setFlash('success', 'check your email for next instructions');
                 return $this->goHome();
+            } catch(\DomainException $e) {
+                Yii::$app->errorHandler->logException($e);
+                Yii::$app->session->setFlash('error', $e->getMessage());
             }
         }
 
         return $this->render('signup', [
             'model' => $form,
         ]);
+    }
+
+    public function actionConfirm($token)
+    {
+        try{
+            $this->_signupService->confirm($token);
+            Yii::$app->session->setFlash('success', 'your email is confirmed');
+            return $this->redirect(['login']);
+        } catch(\DomainException $e) {
+            Yii::$app->errorHandler->logException($e);
+            Yii::$app->session->setFlash('error', $e->getMessage());
+            return $this->goHome();
+        }
     }
 
     /**

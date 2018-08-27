@@ -23,7 +23,7 @@ use yii\web\IdentityInterface;
  */
 class User extends ActiveRecord implements IdentityInterface
 {
-    const STATUS_DELETED = 0;
+    const STATUS_WAIT = 0;
     const STATUS_ACTIVE = 10;
 
     /**
@@ -31,22 +31,51 @@ class User extends ActiveRecord implements IdentityInterface
      * @param $email
      * @param $password
      * @return User
+     * @throws \yii\base\Exception
      */
-    public static function signup($username, $email, $password): self
+    public static function requestSignup($username, $email, $password): self
     {
         $user = new User();
         $user->username = $username;
         $user->email = $email;
         $user->setPassword($password);
         $user->created_at = time();
-        $user->status = self::STATUS_ACTIVE;
+        $user->status = self::STATUS_WAIT;
+        $user->generateEmailConfirmToken();
         $user->generateAuthKey();
         return $user;
+    }
+
+    public function confirmSignup(): void
+    {
+        if(!$this->isWait()) {
+            throw new \DomainException('user is already active.');
+        }
+        $this->status = self::STATUS_ACTIVE;
+        $this->removeEmailConfirmEmailToken();
+    }
+
+    public function isWait()
+    {
+        return $this->status === self::STATUS_WAIT;
     }
 
     public function isActive(): bool
     {
         return $this->status === self::STATUS_ACTIVE;
+    }
+
+    /**
+     * @throws \yii\base\Exception
+     */
+    private function generateEmailConfirmToken()
+    {
+        $this->email_confirm_token = Yii::$app->security->generateRandomString();
+    }
+
+    private function removeEmailConfirmEmailToken()
+    {
+        $this->email_confirm_token = null;
     }
 
     /**
@@ -73,7 +102,7 @@ class User extends ActiveRecord implements IdentityInterface
     public function rules()
     {
         return [
-            ['status', 'in', 'range' => [self::STATUS_ACTIVE, self::STATUS_DELETED]],
+            ['status', 'in', 'range' => [self::STATUS_ACTIVE, self::STATUS_WAIT]],
         ];
     }
 
