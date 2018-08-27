@@ -26,6 +26,23 @@ class User extends ActiveRecord implements IdentityInterface
     const STATUS_DELETED = 0;
     const STATUS_ACTIVE = 10;
 
+    /**
+     * @param $username
+     * @param $email
+     * @param $password
+     * @return User
+     */
+    public static function signup($username, $email, $password): self
+    {
+        $user = new User();
+        $user->username = $username;
+        $user->email = $email;
+        $user->setPassword($password);
+        $user->created_at = time();
+        $user->status = self::STATUS_ACTIVE;
+        $user->generateAuthKey();
+        return $user;
+    }
 
     /**
      * {@inheritdoc}
@@ -51,7 +68,6 @@ class User extends ActiveRecord implements IdentityInterface
     public function rules()
     {
         return [
-            ['status', 'default', 'value' => self::STATUS_ACTIVE],
             ['status', 'in', 'range' => [self::STATUS_ACTIVE, self::STATUS_DELETED]],
         ];
     }
@@ -166,7 +182,7 @@ class User extends ActiveRecord implements IdentityInterface
     /**
      * Generates "remember me" authentication key
      */
-    public function generateAuthKey()
+    private function generateAuthKey()
     {
         $this->auth_key = Yii::$app->security->generateRandomString();
     }
