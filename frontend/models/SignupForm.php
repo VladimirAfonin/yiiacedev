@@ -54,7 +54,7 @@ class SignupForm extends Model
      *
      * @return User|null the saved model or null if saving fails
      */
-    public function signup()
+   /* public function signup()
     {
         if (!$this->validate()) {
             return null;
@@ -62,5 +62,5 @@ class SignupForm extends Model
         
         $user =  User::signup($this->username, $this->email, $this->password);
         return $user->save() ? $user : null;
-    }
+    }*/
 }
